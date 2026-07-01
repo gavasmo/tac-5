@@ -60,6 +60,13 @@ export const api = {
   async getSchema(): Promise<DatabaseSchemaResponse> {
     return apiRequest<DatabaseSchemaResponse>('/schema');
   },
+
+  // Generate a natural language query suggestion
+  async generateQuery(): Promise<GenerateQueryResponse> {
+    return apiRequest<GenerateQueryResponse>('/generate-query', {
+      method: 'POST'
+    });
+  },
   
   // Generate insights
   async generateInsights(request: InsightsRequest): Promise<InsightsResponse> {

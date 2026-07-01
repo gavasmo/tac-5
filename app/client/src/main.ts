@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeQueryInput();
   initializeFileUpload();
   initializeModal();
+  initializeGenerateQueryButton();
   loadDatabaseSchema();
 });
 
@@ -45,6 +46,33 @@ function initializeQueryInput() {
   queryInput.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       queryButton.click();
+    }
+  });
+}
+
+// Generate Query Functionality
+function initializeGenerateQueryButton() {
+  const generateQueryButton = document.getElementById('generate-query-button') as HTMLButtonElement;
+  const queryInput = document.getElementById('query-input') as HTMLTextAreaElement;
+
+  generateQueryButton.addEventListener('click', async () => {
+    generateQueryButton.disabled = true;
+    generateQueryButton.innerHTML = '<span class="loading"></span>';
+
+    try {
+      const response = await api.generateQuery();
+
+      if (response.error) {
+        displayError(response.error);
+      } else {
+        // Always overwrite the query input field with the generated query
+        queryInput.value = response.query;
+      }
+    } catch (error) {
+      displayError(error instanceof Error ? error.message : 'Failed to generate query');
+    } finally {
+      generateQueryButton.disabled = false;
+      generateQueryButton.textContent = 'Generate Query';
     }
   });
 }

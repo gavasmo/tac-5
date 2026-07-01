@@ -17,10 +17,11 @@ from core.data_models import (
     InsightsResponse,
     HealthCheckResponse,
     TableSchema,
-    ColumnInfo
+    ColumnInfo,
+    GenerateQueryResponse
 )
 from core.file_processor import convert_csv_to_sqlite, convert_json_to_sqlite, convert_jsonl_to_sqlite
-from core.llm_processor import generate_sql
+from core.llm_processor import generate_sql, generate_natural_language_query
 from core.sql_processor import execute_sql_safely, get_database_schema
 from core.insights import generate_insights
 from core.sql_security import (
@@ -143,6 +144,23 @@ async def process_natural_language_query(request: QueryRequest) -> QueryResponse
             columns=[],
             row_count=0,
             execution_time_ms=0,
+            error=str(e)
+        )
+
+@app.post("/api/generate-query", response_model=GenerateQueryResponse)
+async def generate_query_endpoint() -> GenerateQueryResponse:
+    """Generate a natural language query suggestion grounded in the current database schema"""
+    try:
+        schema_info = get_database_schema()
+        query = generate_natural_language_query(schema_info)
+        response = GenerateQueryResponse(query=query)
+        logger.info(f"[SUCCESS] Generated natural language query: {query}")
+        return response
+    except Exception as e:
+        logger.error(f"[ERROR] Query generation failed: {str(e)}")
+        logger.error(f"[ERROR] Full traceback:\n{traceback.format_exc()}")
+        return GenerateQueryResponse(
+            query="",
             error=str(e)
         )
 
