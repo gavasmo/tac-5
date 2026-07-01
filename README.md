@@ -87,6 +87,7 @@ bun run dev
    - Uploading a file with the same name will overwrite the existing table
 2. **Query Your Data**: Type a natural language query like "Show me all users who signed up last week"
    - Press `Cmd+Enter` (Mac) or `Ctrl+Enter` (Windows/Linux) to run the query
+   - Not sure what to ask? Click "Generate Query" to get an example question grounded in your current schema
 3. **View Results**: See the generated SQL and results in a table format
 4. **Manage Tables**: Click the × button on any table to remove it
 
@@ -130,6 +131,7 @@ bun run preview            # Preview production build
 
 - `POST /api/upload` - Upload CSV/JSON file
 - `POST /api/query` - Process natural language query
+- `POST /api/generate-query` - Generate an example natural language query grounded in the current schema
 - `GET /api/schema` - Get database schema
 - `POST /api/insights` - Generate column insights
 - `GET /api/health` - Health check
