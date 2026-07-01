@@ -2,10 +2,13 @@ import pytest
 import os
 from unittest.mock import patch, MagicMock
 from core.llm_processor import (
-    generate_sql_with_openai, 
-    generate_sql_with_anthropic, 
+    generate_sql_with_openai,
+    generate_sql_with_anthropic,
     format_schema_for_prompt,
-    generate_sql
+    generate_sql,
+    generate_nl_query_with_openai,
+    generate_nl_query_with_anthropic,
+    generate_natural_language_query
 )
 from core.data_models import QueryRequest
 
@@ -276,12 +279,186 @@ class TestLLMProcessor:
     def test_generate_sql_only_openai_key(self, mock_openai_func):
         # Test when only OpenAI key exists
         mock_openai_func.return_value = "SELECT * FROM sales"
-        
+
         with patch.dict(os.environ, {'OPENAI_API_KEY': 'openai-key'}, clear=True):
             request = QueryRequest(query="Show sales data", llm_provider="anthropic")
             schema_info = {'tables': {}}
-            
+
             result = generate_sql(request, schema_info)
-            
+
             assert result == "SELECT * FROM sales"
             mock_openai_func.assert_called_once_with("Show sales data", schema_info)
+
+
+class TestNaturalLanguageQueryGeneration:
+
+    @patch('core.llm_processor.OpenAI')
+    def test_generate_nl_query_with_openai_success(self, mock_openai_class):
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.choices[0].message.content = "Which users signed up in the last month?"
+        mock_client.chat.completions.create.return_value = mock_response
+
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'}):
+            schema_info = {
+                'tables': {
+                    'users': {
+                        'columns': {'id': 'INTEGER', 'name': 'TEXT', 'signup_date': 'TEXT'},
+                        'row_count': 20
+                    }
+                }
+            }
+
+            result = generate_nl_query_with_openai(schema_info)
+
+            assert result == "Which users signed up in the last month?"
+            mock_client.chat.completions.create.assert_called_once()
+
+            call_args = mock_client.chat.completions.create.call_args
+            assert call_args[1]['model'] == 'gpt-4.1-mini'
+
+    @patch('core.llm_processor.OpenAI')
+    def test_generate_nl_query_with_openai_strips_markdown_and_quotes(self, mock_openai_class):
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.choices[0].message.content = '```\n"What is the average price of products?"\n```'
+        mock_client.chat.completions.create.return_value = mock_response
+
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'}):
+            schema_info = {'tables': {}}
+
+            result = generate_nl_query_with_openai(schema_info)
+
+            assert result == "What is the average price of products?"
+
+    @patch('core.llm_processor.OpenAI')
+    def test_generate_nl_query_with_openai_limits_to_two_sentences(self, mock_openai_class):
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.choices[0].message.content = (
+            "What is the total revenue? How many users are there? What is the average order size?"
+        )
+        mock_client.chat.completions.create.return_value = mock_response
+
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'}):
+            schema_info = {'tables': {}}
+
+            result = generate_nl_query_with_openai(schema_info)
+
+            assert result == "What is the total revenue? How many users are there?"
+
+    def test_generate_nl_query_with_openai_no_api_key(self):
+        with patch.dict(os.environ, {}, clear=True):
+            schema_info = {'tables': {}}
+
+            with pytest.raises(Exception) as exc_info:
+                generate_nl_query_with_openai(schema_info)
+
+            assert "OPENAI_API_KEY environment variable not set" in str(exc_info.value)
+
+    @patch('core.llm_processor.OpenAI')
+    def test_generate_nl_query_with_openai_api_error(self, mock_openai_class):
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+        mock_client.chat.completions.create.side_effect = Exception("API Error")
+
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'}):
+            schema_info = {'tables': {}}
+
+            with pytest.raises(Exception) as exc_info:
+                generate_nl_query_with_openai(schema_info)
+
+            assert "Error generating natural language query with OpenAI" in str(exc_info.value)
+
+    @patch('core.llm_processor.Anthropic')
+    def test_generate_nl_query_with_anthropic_success(self, mock_anthropic_class):
+        mock_client = MagicMock()
+        mock_anthropic_class.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.content[0].text = "Which products are the most expensive?"
+        mock_client.messages.create.return_value = mock_response
+
+        with patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'test-key'}):
+            schema_info = {
+                'tables': {
+                    'products': {
+                        'columns': {'id': 'INTEGER', 'name': 'TEXT', 'price': 'REAL'},
+                        'row_count': 32
+                    }
+                }
+            }
+
+            result = generate_nl_query_with_anthropic(schema_info)
+
+            assert result == "Which products are the most expensive?"
+            mock_client.messages.create.assert_called_once()
+
+            call_args = mock_client.messages.create.call_args
+            assert call_args[1]['model'] == 'claude-3-haiku-20240307'
+
+    def test_generate_nl_query_with_anthropic_no_api_key(self):
+        with patch.dict(os.environ, {}, clear=True):
+            schema_info = {'tables': {}}
+
+            with pytest.raises(Exception) as exc_info:
+                generate_nl_query_with_anthropic(schema_info)
+
+            assert "ANTHROPIC_API_KEY environment variable not set" in str(exc_info.value)
+
+    @patch('core.llm_processor.Anthropic')
+    def test_generate_nl_query_with_anthropic_api_error(self, mock_anthropic_class):
+        mock_client = MagicMock()
+        mock_anthropic_class.return_value = mock_client
+        mock_client.messages.create.side_effect = Exception("API Error")
+
+        with patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'test-key'}):
+            schema_info = {'tables': {}}
+
+            with pytest.raises(Exception) as exc_info:
+                generate_nl_query_with_anthropic(schema_info)
+
+            assert "Error generating natural language query with Anthropic" in str(exc_info.value)
+
+    @patch('core.llm_processor.generate_nl_query_with_openai')
+    def test_generate_natural_language_query_openai_key_priority(self, mock_openai_func):
+        mock_openai_func.return_value = "Which users are most active?"
+
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'openai-key', 'ANTHROPIC_API_KEY': 'anthropic-key'}):
+            schema_info = {'tables': {}}
+
+            result = generate_natural_language_query(schema_info)
+
+            assert result == "Which users are most active?"
+            mock_openai_func.assert_called_once_with(schema_info)
+
+    @patch('core.llm_processor.generate_nl_query_with_anthropic')
+    def test_generate_natural_language_query_anthropic_fallback(self, mock_anthropic_func):
+        mock_anthropic_func.return_value = "Which orders were placed last week?"
+
+        with patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'anthropic-key'}, clear=True):
+            schema_info = {'tables': {}}
+
+            result = generate_natural_language_query(schema_info)
+
+            assert result == "Which orders were placed last week?"
+            mock_anthropic_func.assert_called_once_with(schema_info)
+
+    @patch('core.llm_processor.generate_nl_query_with_openai')
+    def test_generate_natural_language_query_defaults_to_openai_when_no_keys(self, mock_openai_func):
+        mock_openai_func.side_effect = Exception("Error generating natural language query with OpenAI: OPENAI_API_KEY environment variable not set")
+
+        with patch.dict(os.environ, {}, clear=True):
+            schema_info = {'tables': {}}
+
+            with pytest.raises(Exception) as exc_info:
+                generate_natural_language_query(schema_info)
+
+            assert "OPENAI_API_KEY" in str(exc_info.value)
+            mock_openai_func.assert_called_once_with(schema_info)
