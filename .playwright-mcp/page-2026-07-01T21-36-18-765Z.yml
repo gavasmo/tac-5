@@ -1,0 +1,39 @@
+- generic [ref=f1e3]:
+  - heading "Natural Language SQL Interface" [level=1] [ref=f1e4]
+  - generic [ref=f1e5]:
+    - textbox "Ask a question about your data... (e.g., 'Show me users who signed up last week')" [ref=f1e6]
+    - generic [ref=f1e7]:
+      - generic [ref=f1e8]:
+        - button "Query" [ref=f1e9] [cursor=pointer]
+        - button "Upload Data" [ref=f1e10] [cursor=pointer]
+      - button "Generate Query" [ref=f1e11] [cursor=pointer]
+  - generic [ref=f1e12]:
+    - generic [ref=f1e69]: Table "users" created successfully with 20 rows!
+    - heading "Available Tables" [level=3] [ref=f1e13]
+    - generic [ref=f1e14]:
+      - generic [ref=f1e70]:
+        - generic [ref=f1e71]:
+          - generic [ref=f1e72]:
+            - generic [ref=f1e73]: products
+            - generic [ref=f1e74]: 32 rows, 6 columns
+          - button "×" [ref=f1e75] [cursor=pointer]
+        - generic [ref=f1e76]:
+          - generic [ref=f1e77]: product_id🔢 INTEGER
+          - generic [ref=f1e78]: product_name📝 TEXT
+          - generic [ref=f1e79]: category📝 TEXT
+          - generic [ref=f1e80]: price💯 REAL
+          - generic [ref=f1e81]: stock_quantity🔢 INTEGER
+          - generic [ref=f1e82]: last_restocked📝 TEXT
+      - generic [ref=f1e83]:
+        - generic [ref=f1e84]:
+          - generic [ref=f1e85]:
+            - generic [ref=f1e86]: users
+            - generic [ref=f1e87]: 20 rows, 6 columns
+          - button "×" [ref=f1e88] [cursor=pointer]
+        - generic [ref=f1e89]:
+          - generic [ref=f1e90]: id🔢 INTEGER
+          - generic [ref=f1e91]: name📝 TEXT
+          - generic [ref=f1e92]: email📝 TEXT
+          - generic [ref=f1e93]: signup_date📝 TEXT
+          - generic [ref=f1e94]: age🔢 INTEGER
+          - generic [ref=f1e95]: city📝 TEXT
