@@ -25,6 +25,11 @@ interface QueryResponse {
   error?: string;
 }
 
+interface GenerateQueryResponse {
+  query: string;
+  error?: string;
+}
+
 // Database Schema Types
 interface ColumnInfo {
   name: string;
